@@ -43,8 +43,8 @@ IP_SERVER_QoS = '10.0.0.99'
 #MAC do Controlador
 MAC_SERVER_QoS = 'ff:ff:ff:00:00:00'
 
-#Id do Switch onde esta os Servidores
-ID_SWITCH = 3
+#Id do Switch onde esta o Firewall
+ID_SWITCH = 1
 
 #Porta que vai gerar o Packet_In
 PORTA_Packet_In = 1234
@@ -130,17 +130,18 @@ class MeuApp(app_manager.RyuApp):
             #self.logger.info("Pacote Nao Sei!!")
             return
         if pkt_icmp:
-            global contador
-            print(contador)
-            contador = contador + 1
-            if contador == 20:
-                print("Acabou o tempo!!")
-                id_switch = datapath.id
-                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=60000,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.1,nw_dst=10.0.0.8,actions=drop')
-                contador = 0
-            #print(pkt_icmp)
-            #print("Ping!!")
-            #print(pkt_ipv4)
+            if datapath.id == ID_SWITCH:
+                global contador
+                print(contador)
+                contador = contador + 1
+                if contador == 20:
+                    print("Acabou o tempo!!")
+                    id_switch = datapath.id
+                    os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=60000,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.1,nw_dst=10.0.0.8,actions=drop')
+                    contador = 0
+                #print(pkt_icmp)
+                #print("Ping!!")
+                #print(pkt_ipv4)
 
 
         #Se for pacote ARP
