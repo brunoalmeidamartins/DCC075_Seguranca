@@ -62,13 +62,12 @@ TABELA_MAC_SWITCH = [] #Mapea a saida de MAC para cada switch
 
 #Arquivos
 filename = path_home+'/ryu/Bruno/classes.conf'	#Arquivo de lista de objetos Classe
+contador = 0
 
 
 
 class MeuApp(app_manager.RyuApp):
-    contador = 0
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
-
     def __init__(self, *args, **kwargs):
         super(MeuApp, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
@@ -78,26 +77,7 @@ class MeuApp(app_manager.RyuApp):
         self.links = {}
         self.no_of_nodes = 0
         self.no_of_links = 0
-
-
-    '''
-    Envia a mensagem ao switch
-    '''
-    def add_flow(self, datapath, priority, match, actions, buffer_id=None):
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
-                                             actions)]
-        if buffer_id:
-            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
-                                    priority=priority, match=match,
-                                    instructions=inst)
-        else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                    match=match, instructions=inst)
-        datapath.send_msg(mod)
-        #print(mod)
+        #self.contador = 0
 
     '''
     Instala regras na inicializacao
@@ -150,10 +130,13 @@ class MeuApp(app_manager.RyuApp):
             #self.logger.info("Pacote Nao Sei!!")
             return
         if pkt_icmp:
+            global contador
             print(contador)
             contador = contador + 1
-            if contador == 10:
+            if contador == 20:
                 print("Acabou o tempo!!")
+                id_switch = datapath.id
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=60000,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.1,nw_dst=10.0.0.8,actions=drop')
                 contador = 0
             #print(pkt_icmp)
             #print("Ping!!")
