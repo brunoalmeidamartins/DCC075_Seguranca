@@ -19,29 +19,11 @@ from ryu.lib.mac import haddr_to_bin
 #Topologia
 from ryu.topology import event, switches
 from ryu.topology.api import get_switch, get_link
-import networkx as nx
 #Sistema
 import os
-import requests
-import pickle
-#from classe import Classe
 
-'''
-Itens copiado do l3-qos-> Alexandre
-'''
+
 path_home = os.getenv("HOME") #Captura o caminho da pasta HOME
-
-##### Porta do servidor
-SERVER_PORT = 23000
-
-##### Vazao maxima da rede (bps)
-TX_MAX = 1000000000
-
-#Ip de comunicacao com Controlador
-IP_SERVER_QoS = '10.0.0.99'
-
-#MAC do Controlador
-MAC_SERVER_QoS = 'ff:ff:ff:00:00:00'
 
 #Id do Switch onde esta o Firewall
 ID_SWITCH = 1
@@ -49,19 +31,7 @@ ID_SWITCH = 1
 #Porta que vai gerar o Packet_In
 PORTA_Packet_In = 1234
 
-#Mapeamento id em dpid
-table_id = []
-
-#Teste da Topologia
-TABLE_MAC_SWITCH = []
-#link_list = []
-
-#Tabelas
-TABELA_IP_SWITCH = [] #Mapea a saida do IP para cada switch
-TABELA_MAC_SWITCH = [] #Mapea a saida de MAC para cada switch
-
-#Arquivos
-filename = path_home+'/ryu/Bruno/classes.conf'	#Arquivo de lista de objetos Classe
+#Contador PING
 contador = 0
 
 
@@ -70,20 +40,13 @@ class MeuApp(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     def __init__(self, *args, **kwargs):
         super(MeuApp, self).__init__(*args, **kwargs)
-        self.mac_to_port = {}
-        self.topology_api_app = self
-        #self.net=nx.DiGraph()
-        self.nodes = {}
-        self.links = {}
-        self.no_of_nodes = 0
-        self.no_of_links = 0
-        #self.contador = 0
-
     '''
     Instala regras na inicializacao
     '''
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def _switch_features_handler(self, ev):
+
+
 
         """Handle switch features reply to remove flow entries in table 0 and 1."""
         msg = ev.msg
@@ -92,6 +55,37 @@ class MeuApp(app_manager.RyuApp):
             id_switch = datapath.id
             os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=40000,dl_type=0x0800,nw_proto=17,tp_dst='+str(PORTA_Packet_In)+',actions=output:controller')
             os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=40000,dl_type=0x0800,nw_proto=1,actions=output:controller')
+            if id_switch == ID_SWITCH:
+                #Regra: Somente cliente 2 acessa h8 e h9
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_src=10.0.0.2,nw_dst=10.0.0.8,tp_dst=23000,actions=output:6')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_src=10.0.0.2,nw_dst=10.0.0.9,tp_dst=23000,actions=output:6')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_dst=10.0.0.8,tp_dst=23000,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_dst=10.0.0.9,tp_dst=23000,actions=drop')
+                #Regra: Somente cliente 3 acessa h6 e h7
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_src=10.0.0.3,nw_dst=10.0.0.6,tp_dst=23000,actions=output:5')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_src=10.0.0.3,nw_dst=10.0.0.7,tp_dst=23000,actions=output:5')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_dst=10.0.0.6,tp_dst=23000,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_dst=10.0.0.7,tp_dst=23000,actions=drop')
+                #Regra: Somente cliente 1 acessa h4 e h5
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_src=10.0.0.1,nw_dst=10.0.0.4,tp_dst=23000,actions=output:4')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_src=10.0.0.1,nw_dst=10.0.0.5,tp_dst=23000,actions=output:4')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_dst=10.0.0.4,tp_dst=23000,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=6,nw_dst=10.0.0.5,tp_dst=23000,actions=drop')
+
+                #Bloquear o ping do cliente 3
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.3,nw_dst=10.0.0.4,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.3,nw_dst=10.0.0.5,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.3,nw_dst=10.0.0.6,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.3,nw_dst=10.0.0.7,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.3,nw_dst=10.0.0.8,actions=drop')
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=50005,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.3,nw_dst=10.0.0.9,actions=drop')
+
+                #Elemento Desconhecido h10
+                os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=60005,dl_type=0x0800,nw_src=10.0.0.10,actions=output:controller')
+
+            else:
+                os.system('python '+path_home+'/DCC075_Seguranca/Rotas_IoT.py s'+str(id_switch)) #Define as rotas dos elementos IoT "Rede Interna"
+
         except Exception as e:
             print(e)
 
@@ -115,12 +109,6 @@ class MeuApp(app_manager.RyuApp):
         pkt_ipv4 = pkt.get_protocol(ipv4.ipv4)
         pkt_udp = pkt.get_protocol(udp.udp)
 
-
-        #Preenche as tabelas de IP e MAC
-        #self.preencheTabelaIP(pkt)
-        #self.preencheTabelaMAC(pkt)
-
-
         #Pacote ethernet
         if eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
@@ -131,19 +119,15 @@ class MeuApp(app_manager.RyuApp):
             return
         if pkt_icmp:
             if datapath.id == ID_SWITCH:
-                global contador
-                print(contador)
-                contador = contador + 1
-                if contador == 20:
-                    print("Acabou o tempo!!")
-                    id_switch = datapath.id
-                    os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=60000,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.1,nw_dst=10.0.0.8,actions=drop')
-                    contador = 0
-                #print(pkt_icmp)
-                #print("Ping!!")
-                #print(pkt_ipv4)
-
-
+                if pkt_ipv4.src == '10.0.0.1':
+                    global contador
+                    print('Ping numero: '+str(contador+1))
+                    contador = contador + 1
+                    if contador == 10:
+                        print("Numero de Ping Esgotado!!")
+                        id_switch = datapath.id
+                        os.system('ovs-ofctl add-flow s' + str(id_switch) + ' priority=60000,dl_type=0x0800,nw_proto=1,nw_src=10.0.0.1,nw_dst='+pkt_ipv4.dst+',idle_timeout=30,actions=drop')
+                        contador = 0
         #Se for pacote ARP
         if pkt_arp:
             pass
@@ -151,11 +135,8 @@ class MeuApp(app_manager.RyuApp):
 
         #Se for IPv4
         if pkt_ipv4:
-            pass
+            if pkt_ipv4.src == '10.0.0.10':
+                print('ALERTA!!!\nElemento descohecido na rede!! IP: '+str(pkt_ipv4.src))
 
-#app_manager.require_app('ryu.app.ofctl_rest')
-app_manager.require_app('ryu.app.simple_switch_13_mod')
-#app_manager.require_app('ryu.app.simple_switch_13')
-#app_manager.require_app('ryu.app.rest_conf_switch')
-#app_manager.require_app('ryu.app.rest_topology')
-#app_manager.require_app('ryu.app.rest_qos_mod')
+#APIs necessaria para funcionamento
+app_manager.require_app('ryu.app.simple_switch_13_TrabalhoEdelberto')

@@ -3,14 +3,18 @@
 
 import socket
 
-host = "10.0.0.4"
+host = raw_input("Digite o ip do servidor: ")
+separa = host.split('\n')
+host = separa[0]
+print(host)
 porta = 23000
+
 
 cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 cliente.connect((host,porta))
 
-cliente.send("Tempartura")
+cliente.send("GET")
 
 resposta = cliente.recv(4096)
 

@@ -15,6 +15,8 @@ def myNetwork():
     net = Mininet( topo=None,
                    build=False,
                    autoSetMacs=True,
+                   host=CPULimitedHost,
+                   link=TCLink,
                    ipBase='10.0.0.0/8')
 
     info( '*** Adding controller\n' )
@@ -46,20 +48,22 @@ def myNetwork():
     h7 = net.addHost('h7', cls=Host, ip='10.0.0.7', defaultRoute=None)
     h8 = net.addHost('h8', cls=Host, ip='10.0.0.8', defaultRoute=None)
     h9 = net.addHost('h9', cls=Host, ip='10.0.0.9', defaultRoute=None)
+    h10 = net.addHost('h10', cls=Host, ip='10.0.0.10', defaultRoute=None)
 
     info( '*** Add links\n')
-    net.addLink(h1, s1)
-    net.addLink(h2, s1)
-    net.addLink(h3, s1)
-    net.addLink(s2, h4)
-    net.addLink(h5, s2)
-    net.addLink(h6, s3)
-    net.addLink(h7, s3)
-    net.addLink(h8, s4)
-    net.addLink(h9, s4)
-    net.addLink(s1, s2)
-    net.addLink(s1, s3)
-    net.addLink(s1, s4)
+    net.addLink(h1, s1, 1, 1)
+    net.addLink(h2, s1, 1, 2)
+    net.addLink(h3, s1, 1, 3)
+    net.addLink(h4, s2, 1, 1)
+    net.addLink(h5, s2, 1, 2)
+    net.addLink(h6, s3, 1, 1)
+    net.addLink(h7, s3, 1, 2)
+    net.addLink(h8, s4, 1, 1)
+    net.addLink(h9, s4, 1, 2)
+    net.addLink(h10, s3, 1, 3)
+    net.addLink(s1, s2, 4, 5)
+    net.addLink(s1, s3, 5, 5)
+    net.addLink(s1, s4, 6, 5)
 
     info( '*** Starting network\n')
     net.build()
@@ -72,6 +76,18 @@ def myNetwork():
     net.get('s4').start([c0])
     net.get('s3').start([c0])
     net.get('s1').start([c0])
+
+    info( '*** Setting routes\n')
+    h1.cmd('route add default dev h1-eth1')
+    h2.cmd('route add default dev h2-eth1')
+    h3.cmd('route add default dev h3-eth1')
+    h4.cmd('route add default dev h4-eth1')
+    h5.cmd('route add default dev h5-eth1')
+    h6.cmd('route add default dev h6-eth1')
+    h7.cmd('route add default dev h7-eth1')
+    h8.cmd('route add default dev h8-eth1')
+    h9.cmd('route add default dev h9-eth1')
+    h10.cmd('route add default dev h10-eth1')
 
     info( '*** Post configure switches and hosts\n')
 
